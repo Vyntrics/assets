@@ -14,6 +14,22 @@ BLACKLIST = {
     '0xbadcontractaddress',
 }
 
+CHAIN_ORDER = [
+    'bitcoin',
+    'ethereum',
+    'solana',
+    'binance-smart-chain',
+    'polygon-pos',
+    'avalanche',
+    'arbitrum-one',
+    'base',
+    'optimistic-ethereum',
+    'zksync',
+    'world-chain',
+    'tron',
+    'stellar'
+]
+
 CHAIN_MAP = {
     'bitcoin': 'bitcoin',
     'ethereum': 'ethereum',
@@ -85,8 +101,10 @@ def fetch_json(url, retries=3):
         return None
 
 def main():
-    final_token_list = []
+    natives_list = []
+    tokens_list = []
     
+    print("Fetching ID Map...")
     id_map = fetch_json("https://api.coingecko.com/api/v3/coins/list?include_platform=true")
     if not id_map or not isinstance(id_map, list):
         sys.exit(1)
@@ -100,10 +118,12 @@ def main():
                 key = f"{plat}:{addr.lower()}"
                 address_lookup[key] = coin.get('id')
 
-    for chain_key, platform_id in CHAIN_MAP.items():
+    print("Preparing Natives...")
+    for chain_key in CHAIN_ORDER:
         if chain_key in GAS_TOKENS:
             gt = GAS_TOKENS[chain_key]
-            final_token_list.append({
+            platform_id = CHAIN_MAP[chain_key]
+            natives_list.append({
                 "id": gt['id'],
                 "symbol": gt['symbol'],
                 "name": gt['name'],
@@ -113,9 +133,13 @@ def main():
                 "decimals": gt['decimals']
             })
 
-        if chain_key == 'bitcoin':
-            continue
-
+    print("Collecting Tokens...")
+    for chain_key in CHAIN_ORDER:
+        if chain_key == 'bitcoin': continue 
+        
+        platform_id = CHAIN_MAP[chain_key]
+        print(f"Fetching {platform_id}...")
+        
         data = fetch_json(f"https://api.coingecko.com/api/v3/token_lists/{platform_id}/all.json")
         if not data or not isinstance(data, dict) or 'tokens' not in data:
             continue
@@ -143,7 +167,7 @@ def main():
             if img:
                 img = img.replace('/thumb/', '/small/').replace('/large/', '/small/')
 
-            final_token_list.append({
+            tokens_list.append({
                 "id": canonical_id,
                 "symbol": symbol,
                 "name": name,
@@ -155,7 +179,13 @@ def main():
         
         time.sleep(0.2 if API_KEY else 1.5)
 
+    print("Sorting Tokens by ID...")
+    tokens_list.sort(key=lambda x: x['id'])
+    
+    final_token_list = natives_list + tokens_list
+
     if len(final_token_list) < MIN_TOKEN_THRESHOLD:
+        print("Error: List too small.")
         sys.exit(1)
 
     if not os.path.exists(OUTPUT_DIR):
@@ -163,8 +193,11 @@ def main():
 
     full_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
     
+    print(f"Saving {len(final_token_list)} assets...")
     with open(full_path, 'w', encoding='utf-8') as f:
         json.dump(final_token_list, f, separators=(',', ':'))
+    
+    print("Success.")
 
 if __name__ == "__main__":
     main()
