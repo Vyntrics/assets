@@ -10,8 +10,8 @@ ICONS_BASE_URL = 'https://vyntrics.github.io/assets/icons/'
 MIN_TOKEN_THRESHOLD = 1000 
 
 BLACKLIST = {
-    '0x0000000000000000000000000000000000000000',
-    '0xbadcontractaddress',
+    'scam-token-id',
+    'another-bad-token',
 }
 
 CHAIN_ORDER = [
@@ -24,10 +24,23 @@ CHAIN_ORDER = [
     'arbitrum-one',
     'base',
     'optimistic-ethereum',
-    'zksync',
     'world-chain',
+    'zksync',
     'tron',
     'stellar'
+]
+
+PRIORITY_IDS = [
+    "arbitrum",
+    "optimism",
+    "worldcoin-wld",
+    "zksync",
+    "tether",
+    "usd-coin",
+    "euro-coin",
+    "ethena-usde",
+    "paypal-usd",
+    "tether-gold"
 ]
 
 CHAIN_MAP = {
@@ -102,7 +115,9 @@ def fetch_json(url, retries=3):
 
 def main():
     natives_list = []
-    tokens_list = []
+    
+    priority_buckets = { pid: [] for pid in PRIORITY_IDS }
+    rest_list = []
     
     print("Fetching ID Map...")
     id_map = fetch_json("https://api.coingecko.com/api/v3/coins/list?include_platform=true")
@@ -146,11 +161,13 @@ def main():
 
         for t in data['tokens']:
             address = t.get('address', '').lower()
-            if not address or address in BLACKLIST: 
-                continue
+            if not address: continue
 
             lookup_key = f"{platform_id}:{address}"
             canonical_id = address_lookup.get(lookup_key) or t.get('id')
+            
+            if canonical_id in BLACKLIST:
+                continue
             
             symbol = t.get('symbol')
             name = t.get('name')
@@ -167,7 +184,7 @@ def main():
             if img:
                 img = img.replace('/thumb/', '/small/').replace('/large/', '/small/')
 
-            tokens_list.append({
+            token_obj = {
                 "id": canonical_id,
                 "symbol": symbol,
                 "name": name,
@@ -175,14 +192,24 @@ def main():
                 "platform_id": platform_id,
                 "image_url": img,
                 "decimals": decimals
-            })
+            }
+
+            if canonical_id in priority_buckets:
+                priority_buckets[canonical_id].append(token_obj)
+            else:
+                rest_list.append(token_obj)
         
         time.sleep(0.2 if API_KEY else 1.5)
 
-    print("Sorting Tokens by ID...")
-    tokens_list.sort(key=lambda x: x['id'])
+    print("Sorting and Merging...")
     
-    final_token_list = natives_list + tokens_list
+    final_priority_list = []
+    for pid in PRIORITY_IDS:
+        final_priority_list.extend(priority_buckets[pid])
+
+    rest_list.sort(key=lambda x: x['id'])
+
+    final_token_list = natives_list + final_priority_list + rest_list
 
     if len(final_token_list) < MIN_TOKEN_THRESHOLD:
         print("Error: List too small.")
