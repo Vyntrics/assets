@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'data/**'
+      - 'README.md'
 
 permissions:
   contents: write
@@ -36,7 +42,7 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           if [[ -n $(git status -s) ]]; then
             git add data/token_registry.json
-            git commit -m "Automated update: Vyntrics Token Registry [skip ci]"
+            git commit -m "Actions: Update Token Registry [skip ci]"
             git push
           else
             echo "No changes."

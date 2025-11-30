@@ -6,7 +6,7 @@ import sys
 
 OUTPUT_DIR = 'data'
 OUTPUT_FILE = 'token_registry.json'
-ICONS_BASE_URL = 'https://raw.githubusercontent.com/Vyntrics/assets/main/icons/'
+ICONS_BASE_URL = 'https://vyntrics.github.io/assets/icons/'
 MIN_TOKEN_THRESHOLD = 1000 
 
 BLACKLIST = {
