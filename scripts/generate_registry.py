@@ -15,6 +15,7 @@ BLACKLIST = {
 }
 
 CHAIN_MAP = {
+    'bitcoin': 'bitcoin',
     'ethereum': 'ethereum',
     'solana': 'solana',
     'binance-smart-chain': 'binance-smart-chain',
@@ -24,9 +25,9 @@ CHAIN_MAP = {
     'base': 'base',
     'optimistic-ethereum': 'optimistic-ethereum',
     'zksync': 'zksync',
+    'world-chain': 'world-chain',
     'tron': 'tron',
     'stellar': 'stellar',
-    'world-chain': 'world-chain',
 }
 
 GAS_TOKENS = {
@@ -112,6 +113,9 @@ def main():
                 "decimals": gt['decimals']
             })
 
+        if chain_key == 'bitcoin':
+            continue
+
         data = fetch_json(f"https://api.coingecko.com/api/v3/token_lists/{platform_id}/all.json")
         if not data or not isinstance(data, dict) or 'tokens' not in data:
             continue
@@ -150,18 +154,6 @@ def main():
             })
         
         time.sleep(0.2 if API_KEY else 1.5)
-
-    if 'bitcoin' in GAS_TOKENS:
-        btc = GAS_TOKENS['bitcoin']
-        final_token_list.insert(0, {
-            "id": btc['id'],
-            "symbol": btc['symbol'],
-            "name": btc['name'],
-            "address": "native",
-            "platform_id": "bitcoin",
-            "image_url": f"{ICONS_BASE_URL}{btc['icon']}",
-            "decimals": btc['decimals']
-        })
 
     if len(final_token_list) < MIN_TOKEN_THRESHOLD:
         sys.exit(1)
